@@ -15,11 +15,8 @@ class MileageLog(
     @Column(columnDefinition = "BINARY(16)")
     val id: UUID? = null,
 
-    @Enumerated(EnumType.STRING)
-    val action: ReviewAction,
-
-    @Enumerated(EnumType.STRING)
-    val status: LogStatus,
+    @Column(nullable = false)
+    val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(columnDefinition = "TINYINT default 0", nullable = false)
     val contentPoint: Int = 0,
@@ -30,11 +27,14 @@ class MileageLog(
     @Column(columnDefinition = "TINYINT default 0", nullable = false)
     val bonusPoint: Int = 0,
 
+    @Enumerated(EnumType.STRING)
+    val action: ReviewAction,
+
+    @Enumerated(EnumType.STRING)
+    val status: LogStatus,
+
     @Column(columnDefinition = "TINYINT default 0", nullable = false)
     val variation: Int,
-
-    @Column(nullable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(columnDefinition = "BINARY(16)", nullable = false)
     val userId: UUID,
