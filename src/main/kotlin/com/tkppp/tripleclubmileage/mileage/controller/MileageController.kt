@@ -1,7 +1,9 @@
 package com.tkppp.tripleclubmileage.mileage.controller
 
+import com.tkppp.tripleclubmileage.mileage.dto.MessageResponseDto
 import com.tkppp.tripleclubmileage.mileage.dto.MileageLogResponseDto
 import com.tkppp.tripleclubmileage.mileage.dto.MileageSaveRequestDto
+import com.tkppp.tripleclubmileage.mileage.dto.ValueResponseDto
 import com.tkppp.tripleclubmileage.mileage.service.MileageService
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -16,16 +18,16 @@ class MileageController(
 ) {
 
     @PostMapping("/events")
-    fun getMileageSaveEvents(@RequestBody mileageSaveRequestDto: MileageSaveRequestDto): ResponseEntity<String>{
+    fun getMileageSaveEvents(@RequestBody mileageSaveRequestDto: MileageSaveRequestDto): ResponseEntity<MessageResponseDto>{
         mileageService.saveMileagePoint(mileageSaveRequestDto)
         val message = "MILEAGE_${mileageSaveRequestDto.action.fullname}_SUCCESS"
-        return ResponseEntity(message, HttpStatus.OK)
+        return ResponseEntity(MessageResponseDto(message), HttpStatus.OK)
     }
 
     @GetMapping("/api/mileage/{userId}")
-    fun returnMileagePoint(@PathVariable userId: UUID): ResponseEntity<Int>{
+    fun returnMileagePoint(@PathVariable userId: UUID): ResponseEntity<ValueResponseDto>{
         val point = mileageService.getMileagePoint(userId)
-        return ResponseEntity(point, HttpStatus.OK)
+        return ResponseEntity(ValueResponseDto(point), HttpStatus.OK)
     }
 
     @GetMapping("/api/mileage/all/{userId}")
