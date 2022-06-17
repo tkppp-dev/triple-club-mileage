@@ -34,9 +34,11 @@ class MileageLog(
     val bonusPoint: Int = 0,
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     val action: ReviewAction,
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     val status: LogStatus,
 
     @Column(columnDefinition = "TINYINT default 0", nullable = false)
