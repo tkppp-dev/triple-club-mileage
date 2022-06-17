@@ -13,9 +13,16 @@
  - MySQL 8.0.28(Local)
 
 # 실행 방법
-로컬에서 MySQL Server를 사용했기 때문에 실행전 application.yml 수정 필요  
-ddl-auto = none 으로 설정되어 있기때문에 빌드 전 아래 DDL로 데이터베이스 생성 및 테이블 생성 필요
+## 실행 명령어
+``` bash
+$ git clone https://github.com/tkppp-dev/triple-club-mileage.git
+$ cd triple-club-mileage
+$ ./gradlew build
+$ java -jar './build/libs/triple-club-mileage-0.0.1.jar'
+```
 
+## 유의사항
+로컬에서 MySQL Server를 사용했기 때문에 실행전 application.yml 수정 필요  
 ``` yaml
 spring:
    datasource:
@@ -24,22 +31,8 @@ spring:
       username: <username>
       password: <password>
 ```
+ddl-auto = none 으로 설정되어 있기때문에 빌드 전 아래 DDL로 데이터베이스 생성 및 테이블 생성 필요
 
-``` bash
-$ git clone https://github.com/tkppp-dev/triple-club-mileage.git
-$ cd triple-club-mileage
-$ ./gradlew build
-$ java -jar './build/libs/triple-club-mileage-0.0.1.jar'
-```
-
-# API 명세
-http://localhost:8080/swagger-ui/index.html
-
-# Schema
- - mileage: 사용자의 마일리지 정보를 저장하기 위한 테이블
- - mileage-log: 마일리지 증감이 있을 때마다 이력을 남기기 위한 테이블
-
-## DDL
 ``` mysql
 DROP DATABASE IF EXISTS `triple_mileage`;
 CREATE SCHEMA `triple_mileage` DEFAULT CHARACTER SET utf8 ;
@@ -67,13 +60,20 @@ CREATE TABLE `mileage_log` (
   `review_id` binary(16) NOT NULL,
   `status` varchar(255) NOT NULL,
   `user_id` binary(16) NOT NULL,
-  `variation` tinyint NOT NULL DEFAULT '0',
+  `variation` tinyint NOT NULL DEAULT '0',
   PRIMARY KEY (`id`),
   KEY `ml_i_userid` (`user_id`),
   KEY `ml_i_placeid` (`place_id`),
   KEY `m1_i_reviewid` (`review_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 ```
+
+# API 명세
+http://localhost:8080/swagger-ui/index.html
+
+# Schema
+ - mileage: 사용자의 마일리지 정보를 저장하기 위한 테이블
+ - mileage-log: 마일리지 증감이 있을 때마다 이력을 남기기 위한 테이블
 
 ## mileage
 ### column
