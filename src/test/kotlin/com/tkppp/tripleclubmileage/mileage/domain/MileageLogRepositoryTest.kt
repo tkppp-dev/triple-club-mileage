@@ -38,7 +38,8 @@ class MileageLogRepositoryTest(
                 status = LogStatus.INCREASE,
                 variation = 0,
                 userId = if (it < times) userId else UUID.randomUUID(),
-                placeId = UUID.randomUUID()
+                placeId = UUID.randomUUID(),
+                reviewId = UUID.randomUUID()
             )
         }
 
@@ -58,25 +59,25 @@ class MileageLogRepositoryTest(
     }
 
     @Test
-    @DisplayName("주어진 placeId와 userId가 모두 일치하는 row 중 가장 최신 row 를 반환해야한다")
+    @DisplayName("주어진 reviewId가 일치하는 row 중 가장 최신 row 를 반환해야한다")
     fun findRecentLogTest() {
         // given
-        val userId = UUID.randomUUID()
-        val placeId = UUID.randomUUID()
+        val reviewId = UUID.randomUUID()
         val logs = (0..3).map {
             MileageLog(
                 action = ReviewAction.ADD,
                 status = LogStatus.INCREASE,
                 variation = 0,
-                userId = userId,
-                placeId = placeId
+                userId = UUID.randomUUID(),
+                placeId = UUID.randomUUID(),
+                reviewId = reviewId
             )
         }
 
         mileageLogRepository.saveAll(logs)
 
         // when
-        val result = mileageLogRepository.findRecentLog(userId, placeId)!!
+        val result = mileageLogRepository.findRecentLog(reviewId)!!
 
         // then
         assertThat(result.createdAt).isEqualTo(logs.last().createdAt)
@@ -94,14 +95,16 @@ class MileageLogRepositoryTest(
                 status = LogStatus.INCREASE,
                 variation = 0,
                 userId = UUID.randomUUID(),
-                placeId = placeId1
+                placeId = placeId1,
+                reviewId = UUID.randomUUID()
             ),
             MileageLog(
                 action = ReviewAction.ADD,
                 status = LogStatus.INCREASE,
                 variation = 0,
                 userId = UUID.randomUUID(),
-                placeId = placeId1
+                placeId = placeId1,
+                reviewId = UUID.randomUUID()
             ),
         )
         val place1ModLogs = listOf(
@@ -110,7 +113,8 @@ class MileageLogRepositoryTest(
                 status = LogStatus.INCREASE,
                 variation = 0,
                 userId = UUID.randomUUID(),
-                placeId = placeId1
+                placeId = placeId1,
+                reviewId = UUID.randomUUID()
             )
         )
         val place1DeleteLogs = listOf(
@@ -119,14 +123,16 @@ class MileageLogRepositoryTest(
                 status = LogStatus.INCREASE,
                 variation = 0,
                 userId = UUID.randomUUID(),
-                placeId = placeId1
+                placeId = placeId1,
+                reviewId = UUID.randomUUID()
             ),
             MileageLog(
                 action = ReviewAction.DELETE,
                 status = LogStatus.INCREASE,
                 variation = 0,
                 userId = UUID.randomUUID(),
-                placeId = placeId1
+                placeId = placeId1,
+                reviewId = UUID.randomUUID()
             )
         )
         val place2AddLogs = listOf(
@@ -135,7 +141,8 @@ class MileageLogRepositoryTest(
                 status = LogStatus.INCREASE,
                 variation = 0,
                 userId = UUID.randomUUID(),
-                placeId = placeId2
+                placeId = placeId2,
+                reviewId = UUID.randomUUID()
             ),
         )
         val logs = listOf(
@@ -179,14 +186,16 @@ class MileageLogRepositoryTest(
                 status = LogStatus.INCREASE,
                 variation = 0,
                 userId = UUID.randomUUID(),
-                placeId = placeId1
+                placeId = placeId1,
+                reviewId = UUID.randomUUID()
             ),
             MileageLog(
                 action = ReviewAction.ADD,
                 status = LogStatus.INCREASE,
                 variation = 0,
                 userId = UUID.randomUUID(),
-                placeId = placeId1
+                placeId = placeId1,
+                reviewId = UUID.randomUUID()
             ),
         )
         mileageLogRepository.saveAll(place1AddLogs)

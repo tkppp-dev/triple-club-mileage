@@ -8,9 +8,7 @@ import com.tkppp.tripleclubmileage.mileage.dto.MileageSaveRequestDto
 import com.tkppp.tripleclubmileage.mileage.util.LogStatus
 import com.tkppp.tripleclubmileage.mileage.util.ReviewAction
 import io.mockk.*
-import io.mockk.impl.annotations.SpyK
 import io.mockk.junit5.MockKExtension
-import org.assertj.core.api.Assertions.`as`
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -19,7 +17,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.util.*
-import kotlin.math.log
 
 @ExtendWith(MockKExtension::class)
 class MileageServiceTest {
@@ -87,7 +84,8 @@ class MileageServiceTest {
                     status = LogStatus.INCREASE,
                     variation = 3,
                     userId = userId,
-                    placeId = UUID.randomUUID()
+                    placeId = UUID.randomUUID(),
+                    reviewId = UUID.randomUUID()
                 )
             )
             // stub
@@ -323,7 +321,7 @@ class MileageServiceTest {
             content = "",
             attachedPhotoIds = listOf(),
             userId = UUID.randomUUID(),
-            placeId = UUID.randomUUID()
+            placeId = UUID.randomUUID(),
         )
         // point 총합이 2인 로그
         private val recentLog = MileageLog(
@@ -334,7 +332,8 @@ class MileageServiceTest {
             bonusPoint = 1,
             variation = 2,
             userId = dto.userId,
-            placeId = dto.placeId
+            placeId = dto.placeId,
+            reviewId = dto.reviewId
         )
 
         @Test
@@ -352,11 +351,11 @@ class MileageServiceTest {
         }
 
         @Test
-        @DisplayName("마일리지 테이블에 존재하지 않는 userId를 받는 경우 CustomException(MILEAGE_LOG_NOT_FOUND)을 던진다")
+        @DisplayName("마일리지 로그 테이블에 존재하지 않는 reviewId를 받는 경우 CustomException(MILEAGE_LOG_NOT_FOUND)을 던진다")
         fun getMileageSavingDataWhenActionMod_shouldThrowCustomExceptionWhenMileageLogEntityIsNull() {
             // stub
             every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = dto.userId)
-            every { mileageLogRepository.findRecentLog(any(), any()) } returns null
+            every { mileageLogRepository.findRecentLog(any()) } returns null
 
             // when
             val ex = assertThrows<CustomException>{
@@ -375,7 +374,7 @@ class MileageServiceTest {
 
             // stub
             every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = dto.userId, point = point)
-            every { mileageLogRepository.findRecentLog(any(), any()) } returns recentLog
+            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
 
             // when
             val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionMod(dto)
@@ -413,7 +412,7 @@ class MileageServiceTest {
             )
             // stub
             every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = sdto.userId, point = point)
-            every { mileageLogRepository.findRecentLog(any(), any()) } returns recentLog
+            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
 
             // when
             val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionMod(sdto)
@@ -451,7 +450,7 @@ class MileageServiceTest {
             )
             // stub
             every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = idto.userId, point = point)
-            every { mileageLogRepository.findRecentLog(any(), any()) } returns recentLog
+            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
 
             // when
             val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionMod(idto)
@@ -503,11 +502,11 @@ class MileageServiceTest {
         }
 
         @Test
-        @DisplayName("마일리지 테이블에 존재하지 않는 userId를 받는 경우 CustomException(MILEAGE_LOG_NOT_FOUND)을 던진다")
+        @DisplayName("마일리지 로그 테이블에 존재하지 않는 reviewId를 받는 경우 CustomException(MILEAGE_LOG_NOT_FOUND)을 던진다")
         fun getMileageSavingDataWhenActionDelete_shouldThrowCustomExceptionWhenMileageLogEntityIsNull() {
             // stub
             every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = dto.userId)
-            every { mileageLogRepository.findRecentLog(any(), any()) } returns null
+            every { mileageLogRepository.findRecentLog(any()) } returns null
 
             // when
             val ex = assertThrows<CustomException>{
@@ -530,11 +529,12 @@ class MileageServiceTest {
                 bonusPoint = 1,
                 variation = 2,
                 userId = dto.userId,
-                placeId = dto.placeId
+                placeId = dto.placeId,
+                reviewId = dto.reviewId
             )
             // stub
             every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = dto.userId, point = 10)
-            every { mileageLogRepository.findRecentLog(any(), any()) } returns recentLog
+            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
 
             // when
             val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionDelete(dto)
@@ -582,7 +582,8 @@ class MileageServiceTest {
                 bonusPoint = 1,
                 variation = 2,
                 userId = dto.userId,
-                placeId = dto.placeId
+                placeId = dto.placeId,
+                reviewId = dto.reviewId
             )
             val mileage =  Mileage(id = UUID.randomUUID(), userId = dto.userId, point = 10)
             // stub
@@ -631,7 +632,8 @@ class MileageServiceTest {
                 bonusPoint = 1,
                 variation = 2,
                 userId = dto.userId,
-                placeId = dto.placeId
+                placeId = dto.placeId,
+                reviewId = dto.reviewId
             )
             val newLog = MileageLog(
                 action = dto.action,
@@ -641,13 +643,14 @@ class MileageServiceTest {
                 bonusPoint = 1,
                 variation = -1,
                 userId = dto.userId,
-                placeId = dto.placeId
+                placeId = dto.placeId,
+                reviewId = dto.reviewId
             )
             val mileage =  Mileage(id = UUID.randomUUID(), userId = dto.userId, point = 10)
 
             // stub
             every { mileageRepository.findByUserId(any()) } returns mileage
-            every { mileageLogRepository.findRecentLog(any(), any()) } returns recentLog
+            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
             every { mileageLogRepository.save(any()) } returns newLog
             every {
                 mileage.point -= 1
@@ -688,7 +691,8 @@ class MileageServiceTest {
                 bonusPoint = 1,
                 variation = 2,
                 userId = dto.userId,
-                placeId = dto.placeId
+                placeId = dto.placeId,
+                reviewId = dto.reviewId
             )
             val newLog = MileageLog(
                 action = dto.action,
@@ -698,13 +702,14 @@ class MileageServiceTest {
                 bonusPoint = 0,
                 variation = -2,
                 userId = dto.userId,
-                placeId = dto.placeId
+                placeId = dto.placeId,
+                reviewId = dto.reviewId
             )
             val mileage =  Mileage(id = UUID.randomUUID(), userId = dto.userId, point = 10)
 
             // stub
             every { mileageRepository.findByUserId(any()) } returns mileage
-            every { mileageLogRepository.findRecentLog(any(), any()) } returns recentLog
+            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
             every { mileageLogRepository.save(any()) } returns newLog
             every {
                 mileage.point -= 2
