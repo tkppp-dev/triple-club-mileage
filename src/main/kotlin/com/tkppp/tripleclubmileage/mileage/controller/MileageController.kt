@@ -5,6 +5,10 @@ import com.tkppp.tripleclubmileage.mileage.dto.MileageLogResponseDto
 import com.tkppp.tripleclubmileage.mileage.dto.MileageSaveRequestDto
 import com.tkppp.tripleclubmileage.mileage.dto.ValueResponseDto
 import com.tkppp.tripleclubmileage.mileage.service.MileageService
+import io.swagger.annotations.ApiModel
+import io.swagger.annotations.ApiModelProperty
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -18,19 +22,22 @@ class MileageController(
 ) {
 
     @PostMapping("/events")
-    fun getMileageSaveEvents(@RequestBody mileageSaveRequestDto: MileageSaveRequestDto): ResponseEntity<MessageResponseDto>{
+    @Operation(description = "리뷰 삽입, 수정, 삭제 이벤트 발생시 포인트 부여")
+    fun getMileageSaveEvents(@RequestBody mileageSaveRequestDto: MileageSaveRequestDto): ResponseEntity<MessageResponseDto> {
         mileageService.saveMileagePoint(mileageSaveRequestDto)
         val message = "MILEAGE_${mileageSaveRequestDto.action.fullname}_SUCCESS"
         return ResponseEntity(MessageResponseDto(message), HttpStatus.OK)
     }
 
     @GetMapping("/api/mileage/{userId}")
-    fun returnMileagePoint(@PathVariable userId: UUID): ResponseEntity<ValueResponseDto>{
+    @Operation(description = "유저의 현재 포인트 정보 반환")
+    fun returnMileagePoint(@PathVariable userId: UUID): ResponseEntity<ValueResponseDto> {
         val point = mileageService.getMileagePoint(userId)
         return ResponseEntity(ValueResponseDto(point), HttpStatus.OK)
     }
 
     @GetMapping("/api/mileage/all/{userId}")
+    @Operation(description = "유저의 포인트 증감 이력 반환")
     fun returnMileageLog(@PathVariable userId: UUID): ResponseEntity<List<MileageLogResponseDto>> {
         val logs = mileageService.getMileageLogList(userId)
         return ResponseEntity(logs, HttpStatus.OK)
