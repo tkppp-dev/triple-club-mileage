@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.ninjasquad.springmockk.MockkBean
+import com.tkppp.tripleclubmileage.mileage.dto.MessageResponseDto
 import com.tkppp.tripleclubmileage.mileage.dto.MileageLogResponseDto
 import com.tkppp.tripleclubmileage.mileage.dto.MileageSaveRequestDto
 import com.tkppp.tripleclubmileage.mileage.service.MileageService
@@ -21,8 +22,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import java.nio.charset.Charset
 import java.time.LocalDateTime
 import java.util.*
@@ -55,15 +55,15 @@ internal class MileageControllerTest(
                 placeId = UUID.randomUUID()
             )
             val requestBody = mapper.writeValueAsString(dto)
-            val responseBody = "MILEAGE_${dto.action.fullname}_SUCCESS"
+            val message = "MILEAGE_${dto.action.fullname}_SUCCESS"
             // stub
             every { mileageService.saveMileagePoint(any()) } returns Unit
 
             // when
             mvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON).content(requestBody))
                 .andExpect(status().isOk)
-                .andExpect(content().contentType(MediaType(MediaType.TEXT_PLAIN, Charset.defaultCharset())))
-                .andExpect(content().string(responseBody))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("\$.message").value(message))
         }
 
         @Test
@@ -80,15 +80,15 @@ internal class MileageControllerTest(
                 placeId = UUID.randomUUID()
             )
             val requestBody = mapper.writeValueAsString(dto)
-            val responseBody = "MILEAGE_${dto.action.fullname}_SUCCESS"
+            val message = "MILEAGE_${dto.action.fullname}_SUCCESS"
             // stub
             every { mileageService.saveMileagePoint(any()) } returns Unit
 
             // when
             mvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON).content(requestBody))
                 .andExpect(status().isOk)
-                .andExpect(content().contentType(MediaType(MediaType.TEXT_PLAIN, Charset.defaultCharset())))
-                .andExpect(content().string(responseBody))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("\$.message").value(message))
         }
 
         @Test
@@ -105,15 +105,15 @@ internal class MileageControllerTest(
                 placeId = UUID.randomUUID()
             )
             val requestBody = mapper.writeValueAsString(dto)
-            val responseBody = "MILEAGE_${dto.action.fullname}_SUCCESS"
+            val message = "MILEAGE_${dto.action.fullname}_SUCCESS"
             // stub
             every { mileageService.saveMileagePoint(any()) } returns Unit
 
             // when
             mvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON).content(requestBody))
                 .andExpect(status().isOk)
-                .andExpect(content().contentType(MediaType(MediaType.TEXT_PLAIN, Charset.defaultCharset())))
-                .andExpect(content().string(responseBody))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("\$.message").value(message))
         }
     }
 
@@ -131,7 +131,7 @@ internal class MileageControllerTest(
         mvc.perform(get(uri))
             .andExpect(status().isOk)
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().string("$point"))
+            .andExpect(jsonPath("\$.value").value(point))
     }
 
     @Test
