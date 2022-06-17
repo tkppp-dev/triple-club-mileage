@@ -39,7 +39,13 @@ class MileageService(
 
     fun isFirstReview(placeId: UUID): Boolean {
         val result = mileageLogRepository.findGroupByAction(placeId)
-        return result[0].cnt == result[1].cnt
+        return if(result.isEmpty()){
+            true
+        } else if(result.size == 1) {
+            false
+        } else {
+            result[0].cnt == result[1].cnt
+        }
     }
 
     fun getTotalPoint(cp: Int, ip: Int, bp: Int) = cp + ip + bp
@@ -47,7 +53,7 @@ class MileageService(
     fun getMileageSavingDataWhenActionAdd(dto: MileageSaveRequestDto): Triple<Mileage, MileageLog, Int> {
         val mileage = mileageRepository.findByUserId(dto.userId) ?: Mileage(userId = dto.userId)
         val (contentPoint, imagePoint) = getPoints(dto)
-        val bonusPoint = if(isFirstReview(dto.placeId)) 1 else 0
+        val bonusPoint = if (isFirstReview(dto.placeId)) 1 else 0
         val variation = getTotalPoint(contentPoint, imagePoint, bonusPoint)
         val log = MileageLog(
             action = dto.action,
@@ -117,7 +123,6 @@ class MileageService(
             MOD -> getMileageSavingDataWhenActionMod(dto)
             DELETE -> getMileageSavingDataWhenActionDelete(dto)
         }
-
         // log save
         mileageLogRepository.save(logEntity)
         // mileage save
