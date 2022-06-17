@@ -15,7 +15,7 @@ allOpen {
 }
 
 group = "com.tkppp"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.1"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
