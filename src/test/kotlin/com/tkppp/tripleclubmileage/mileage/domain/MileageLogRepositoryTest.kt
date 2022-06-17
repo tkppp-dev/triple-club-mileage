@@ -15,7 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
 
-@DataJpaTest
+@SpringBootTest
 @ActiveProfiles("dev")
 class MileageLogRepositoryTest(
     @Autowired private val mileageLogRepository: MileageLogRepository
@@ -83,7 +83,7 @@ class MileageLogRepositoryTest(
     }
 
     @Test
-    @DisplayName("특정 placeId 와 일치하는 group by 된 row 의 action(ADD, DELETE) 각각의 개수 정보를 반환해야한다")
+    @DisplayName("특정 placeId 와 일치하는 group by 된 row 의 길이가 2 인 action(ADD, DELETE) 각각의 개수를 담은 리스트를 반환해야한다")
     fun findGroupByActionTest() {
         // given
         val placeId1 = UUID.randomUUID()
@@ -150,7 +150,50 @@ class MileageLogRepositoryTest(
         // when
         val result = mileageLogRepository.findGroupByAction(placeId1)
         // then
+        assertThat(result.size).isEqualTo(2)
         assertThat(result[0].cnt.toInt()).isEqualTo(place1AddLogs.size)
         assertThat(result[1].cnt.toInt()).isEqualTo(place1DeleteLogs.size)
+    }
+
+    @Test
+    @DisplayName("특정 placeId 와 일치하는 group by 된 row 의 action(ADD, DELETE) 각각의 개수가 0이면 빈 리스트를 반환해야한다")
+    fun findGroupByActionTest_empty() {
+        // given
+        val placeId1 = UUID.randomUUID()
+
+        // when
+        val result = mileageLogRepository.findGroupByAction(placeId1)
+
+        // then
+        assertThat(result.size).isEqualTo(0)
+    }
+
+    @Test
+    @DisplayName("특정 placeId 와 일치하는 group by 된 row 의 action(ADD, DELETE) 각각의 개수가 n, 0이면 길이가 1인 리스트를 반환해야한다")
+    fun findGroupByActionTest_length1() {
+        // given
+        val placeId1 = UUID.randomUUID()
+        val place1AddLogs = listOf(
+            MileageLog(
+                action = ReviewAction.ADD,
+                status = LogStatus.INCREASE,
+                variation = 0,
+                userId = UUID.randomUUID(),
+                placeId = placeId1
+            ),
+            MileageLog(
+                action = ReviewAction.ADD,
+                status = LogStatus.INCREASE,
+                variation = 0,
+                userId = UUID.randomUUID(),
+                placeId = placeId1
+            ),
+        )
+        mileageLogRepository.saveAll(place1AddLogs)
+        // when
+        val result = mileageLogRepository.findGroupByAction(placeId1)
+
+        // then
+        assertThat(result.size).isEqualTo(1)
     }
 }
