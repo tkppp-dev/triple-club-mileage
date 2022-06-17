@@ -130,8 +130,8 @@ class MileageServiceTest {
         @DisplayName("placeId 가 일치하는 row 중 action 컬럼의 ADD, DELETE 개수가 같으면 true 를 반환한다")
         fun isFirstReview_shouldReturnTrue() {
             // given
-            val addCnt = 3L
-            val deleteCnt = 3L
+            val addCnt = 0L
+            val deleteCnt = 0L
             // stub
             every { mileageLogRepository.findGroupByAction(placeId) } returns listOf(
                 AddDeleteCountingDto(action = ReviewAction.ADD, cnt = addCnt),
@@ -146,7 +146,7 @@ class MileageServiceTest {
         }
 
         @Test
-        @DisplayName("DB에 존재하지 않는 userId 를 전달받으면 빈 리스트를 반환한다")
+        @DisplayName("placeId 가 일치하는 row 중 action 컬럼의 ADD, DELETE 개수가 다르면 false 를 반환한다")
         fun isFirstReview_shouldReturnFalse() {
             // given
             val addCnt = 3L
@@ -723,6 +723,5 @@ class MileageServiceTest {
         }
 
     }
-
 
 }
