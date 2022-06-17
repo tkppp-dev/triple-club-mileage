@@ -10,9 +10,9 @@ import javax.persistence.*
 @Entity
 @Table(
     indexes = [Index(name = "ml_i_userid", columnList = "userId"),
-        Index(name = "ml_i_placeid",
-        columnList = "placeId"
-    )]
+        Index(name = "ml_i_placeid", columnList = "placeId"),
+        Index(name = "m1_i_reviewid", columnList = "reviewId")
+    ]
 )
 class MileageLog(
     @Id
@@ -46,7 +46,10 @@ class MileageLog(
     val userId: UUID,
 
     @Column(columnDefinition = "BINARY(16)", nullable = false)
-    val placeId: UUID
+    val placeId: UUID,
+
+    @Column(columnDefinition = "BINARY(16)", nullable = false)
+    val reviewId: UUID
 ) {
 
     fun getTotalPoint(): Int {
