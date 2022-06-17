@@ -13,7 +13,8 @@
  - MySQL 8.0.28(Local)
 
 # 실행 방법
-로컬에서 MySQL Server를 사용했기 때문에 실행전 application.yml 수정 필요
+로컬에서 MySQL Server를 사용했기 때문에 실행전 application.yml 수정 필요  
+ddl-auto = none 으로 설정되어 있기때문에 빌드 전 아래 DDL로 데이터베이스 생성 및 테이블 생성 필요
 
 ``` yaml
 spring:
