@@ -2,12 +2,10 @@ package com.tkppp.tripleclubmileage.mileage.domain
 
 import org.hibernate.annotations.GenericGenerator
 import java.util.*
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.GeneratedValue
-import javax.persistence.Id
+import javax.persistence.*
 
 @Entity
+@Table(indexes = [Index(name = "m_i_userid", columnList = "userId")])
 class Mileage(
     @Id
     @GeneratedValue(generator = "uuid2")
