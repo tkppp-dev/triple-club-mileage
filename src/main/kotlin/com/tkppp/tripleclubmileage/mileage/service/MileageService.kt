@@ -18,8 +18,8 @@ class MileageService(
     private val mileageLogRepository: MileageLogRepository
 ) {
 
-    fun getMileagePoint(userId: UUID): Int
-        = when (val entity = mileageRepository.findByUserId(userId)) {
+    fun getMileagePoint(userId: UUID): Int =
+        when (val entity = mileageRepository.findByUserId(userId)) {
             null -> throw CustomException(ErrorCode.MILEAGE_DATA_NOT_FOUND)
             else -> entity.point
         }
@@ -30,31 +30,31 @@ class MileageService(
         return logs.map { MileageLogResponseDto(it) }
     }
 
+    fun getPoints(dto: MileageSaveRequestDto): Pair<Int, Int> {
+        val contentPoint = if (dto.content.isNotEmpty()) 1 else 0
+        val imagePoint = if (dto.attachedPhotoIds.isNotEmpty()) 1 else 0
+
+        return Pair(contentPoint, imagePoint)
+    }
+
     fun isFirstReview(placeId: UUID): Boolean {
         val result = mileageLogRepository.findGroupByAction(placeId)
         return result[0].cnt == result[1].cnt
     }
 
-    fun getPoints(dto: MileageSaveRequestDto): Triple<Int, Int, Int> {
-        val contentPoint = if (dto.content.isNotEmpty()) 1 else 0
-        val imagePoint = if (dto.attachedPhotoIds.isNotEmpty()) 1 else 0
-        val bonusPoint = if (isFirstReview(dto.placeId)) 1 else 0
-
-        return Triple(contentPoint, imagePoint, bonusPoint)
-    }
-
-    fun getTotalPoint(point: Triple<Int, Int, Int>) = point.first + point.second + point.third
+    fun getTotalPoint(cp: Int, ip: Int, bp: Int) = cp + ip + bp
 
     fun getMileageSavingDataWhenActionAdd(dto: MileageSaveRequestDto): Triple<Mileage, MileageLog, Int> {
         val mileage = mileageRepository.findByUserId(dto.userId) ?: Mileage(userId = dto.userId)
-        val point = getPoints(dto)
-        val variation = getTotalPoint(point)
+        val (contentPoint, imagePoint) = getPoints(dto)
+        val bonusPoint = if(isFirstReview(dto.placeId)) 1 else 0
+        val variation = getTotalPoint(contentPoint, imagePoint, bonusPoint)
         val log = MileageLog(
             action = dto.action,
             status = LogStatus.INCREASE,
-            contentPoint = point.first,
-            imagePoint = point.second,
-            bonusPoint = point.third,
+            contentPoint = contentPoint,
+            imagePoint = imagePoint,
+            bonusPoint = bonusPoint,
             variation = variation,
             userId = dto.userId,
             placeId = dto.placeId
@@ -68,8 +68,8 @@ class MileageService(
         val recentLog = mileageLogRepository.findRecentLog(dto.userId, dto.placeId)
             ?: throw CustomException(ErrorCode.MILEAGE_LOG_NOT_FOUND)
 
-        val point = getPoints(dto)
-        val variation = recentLog.getTotalPoint() - getTotalPoint(point)
+        val (contentPoint, imagePoint) = getPoints(dto)
+        val variation = getTotalPoint(contentPoint, imagePoint, recentLog.bonusPoint) - recentLog.getTotalPoint()
         val status = if (variation > 0) {
             LogStatus.INCREASE
         } else if (variation == 0) {
@@ -81,9 +81,9 @@ class MileageService(
         val log = MileageLog(
             action = dto.action,
             status = status,
-            contentPoint = point.first,
-            imagePoint = point.second,
-            bonusPoint = point.third,
+            contentPoint = contentPoint,
+            imagePoint = imagePoint,
+            bonusPoint = recentLog.bonusPoint,
             variation = variation,
             userId = dto.userId,
             placeId = dto.placeId
@@ -112,17 +112,16 @@ class MileageService(
 
     @Transactional
     fun saveMileagePoint(dto: MileageSaveRequestDto) {
-        val (mileage, log, variation) = when (dto.action) {
+        val (mileageEntity, logEntity, variation) = when (dto.action) {
             ADD -> getMileageSavingDataWhenActionAdd(dto)
             MOD -> getMileageSavingDataWhenActionMod(dto)
             DELETE -> getMileageSavingDataWhenActionDelete(dto)
         }
 
+        // log save
+        mileageLogRepository.save(logEntity)
         // mileage save
-        mileage.point += variation
-        mileageRepository.save(mileage)
-        // log sve
-        mileageLogRepository.save(log)
+        mileageEntity.point += variation
+        mileageRepository.save(mileageEntity)
     }
-
 }
