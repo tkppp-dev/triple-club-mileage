@@ -63,7 +63,8 @@ class MileageService(
             bonusPoint = bonusPoint,
             variation = variation,
             userId = dto.userId,
-            placeId = dto.placeId
+            placeId = dto.placeId,
+            reviewId = dto.reviewId
         )
         return Triple(mileage, log, variation)
     }
@@ -71,7 +72,7 @@ class MileageService(
     fun getMileageSavingDataWhenActionMod(dto: MileageSaveRequestDto): Triple<Mileage, MileageLog, Int> {
         val mileage = mileageRepository.findByUserId(dto.userId)
             ?: throw CustomException(ErrorCode.MILEAGE_DATA_NOT_FOUND)
-        val recentLog = mileageLogRepository.findRecentLog(dto.userId, dto.placeId)
+        val recentLog = mileageLogRepository.findRecentLog(dto.reviewId)
             ?: throw CustomException(ErrorCode.MILEAGE_LOG_NOT_FOUND)
 
         val (contentPoint, imagePoint) = getPoints(dto)
@@ -92,7 +93,8 @@ class MileageService(
             bonusPoint = recentLog.bonusPoint,
             variation = variation,
             userId = dto.userId,
-            placeId = dto.placeId
+            placeId = dto.placeId,
+            reviewId = dto.reviewId
         )
 
         return Triple(mileage, log, variation)
@@ -101,7 +103,7 @@ class MileageService(
     fun getMileageSavingDataWhenActionDelete(dto: MileageSaveRequestDto): Triple<Mileage, MileageLog, Int> {
         val mileage = mileageRepository.findByUserId(dto.userId)
             ?: throw CustomException(ErrorCode.MILEAGE_DATA_NOT_FOUND)
-        val recentLog = mileageLogRepository.findRecentLog(dto.userId, dto.placeId)
+        val recentLog = mileageLogRepository.findRecentLog(dto.reviewId)
             ?: throw CustomException(ErrorCode.MILEAGE_LOG_NOT_FOUND)
 
         val variation = -recentLog.getTotalPoint()
@@ -110,7 +112,8 @@ class MileageService(
             status = LogStatus.DECREASE,
             variation = variation,
             userId = dto.userId,
-            placeId = dto.placeId
+            placeId = dto.placeId,
+            reviewId = dto.reviewId
         )
 
         return Triple(mileage, log, variation)
