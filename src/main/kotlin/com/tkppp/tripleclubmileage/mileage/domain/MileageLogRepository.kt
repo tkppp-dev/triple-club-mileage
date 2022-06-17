@@ -5,13 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import java.util.*
 
-fun MileageLogRepository.findRecentLog(userId: UUID, placeId: UUID) =
-    findTop1ByUserIdAndPlaceIdOrderByCreatedAtDesc(userId, placeId)
+fun MileageLogRepository.findRecentLog(reviewId: UUID) =
+    findTop1ByReviewIdOrderByCreatedAtDesc(reviewId = reviewId)
 
 interface MileageLogRepository : JpaRepository<MileageLog, UUID> {
 
     fun findByUserId(userId: UUID): List<MileageLog>
-    fun findTop1ByUserIdAndPlaceIdOrderByCreatedAtDesc(userId: UUID, placeId: UUID): MileageLog?
+    fun findTop1ByReviewIdOrderByCreatedAtDesc(reviewId: UUID): MileageLog?
     @Query(
         """
         select new com.tkppp.tripleclubmileage.mileage.dto.AddDeleteCountingDto(temp.action, count(temp))
