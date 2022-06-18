@@ -22,7 +22,7 @@ class MileageController(
 ) {
 
     @PostMapping("/events")
-    @Operation(description = "리뷰 삽입, 수정, 삭제 이벤트 발생시 포인트 부여")
+    @Operation(description = "리뷰 작성, 수정, 삭제 이벤트 발생시 마일리지 포인트 부여")
     fun getMileageSaveEvents(@RequestBody mileageSaveRequestDto: MileageSaveRequestDto): ResponseEntity<MessageResponseDto> {
         mileageService.saveMileagePoint(mileageSaveRequestDto)
         val message = "MILEAGE_${mileageSaveRequestDto.action.fullname}_SUCCESS"
