@@ -6,7 +6,8 @@ import com.tkppp.tripleclubmileage.mileage.domain.MileageLogRepository
 import com.tkppp.tripleclubmileage.mileage.domain.MileageRepository
 import com.tkppp.tripleclubmileage.mileage.dto.MileageSaveRequestDto
 import com.tkppp.tripleclubmileage.mileage.util.ReviewAction
-import org.junit.jupiter.api.Test
+import org.hamcrest.Matchers.hasSize
+import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -21,6 +22,7 @@ import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @ActiveProfiles("dev")
 class MileageControllerIntegrationTest(
     @Autowired private val mvc: MockMvc,
@@ -41,7 +43,7 @@ class MileageControllerIntegrationTest(
      *    0번: 9점
      *    1번: 6점
      *    2번: 3점
-     * 3. 1번 장소에 대한 리뷰 중, 0번 2번은 리뷰를 내용과 사진은 포함하고 1번은 내용만 포함하도록 리뷰를 수정한다.
+     * 3. 1번 장소에 대한 리뷰(idx = 1, 4, 7), 0,2번 유저는 리뷰를 내용과 사진은 포함하고 1번 유저는 내용만 포함하도록 리뷰를 수정한다.
      *  예상 결과
      *    0번: 9점
      *    1번: 5점
@@ -53,7 +55,8 @@ class MileageControllerIntegrationTest(
      *    2번: 3점
      */
     @Test
-    fun getMileageSaveEventsTest() {
+    @DisplayName("MileageController 통합테스트")
+    fun mileageControllerIntegrationTest() {
         // given
         val addDtos = reviewIds.mapIndexed { idx, reviewId ->
             val userId = userIds[idx / 3]
@@ -156,10 +159,15 @@ class MileageControllerIntegrationTest(
                 .andExpect(jsonPath("\$.value").value(expectedValue))
         }
 
-        val logs = mileageLogRepository.findAll()
-        for(log in logs) {
-            println("userId: ${log.userId}, placeId: ${log.placeId}, action: ${log.action}, status: ${log.status}, variation: ${log.variation}, cp: ${log.contentPoint}, ip: ${log.imagePoint}, bp: ${log.bonusPoint}")
+        // returnMileageLog() test
+        for(id in userIds){
+            val expectedValue = mileageLogRepository.findByUserId(id).size
+            mvc.perform(get("/api/mileage/all/${id}"))
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("\$", hasSize<Int>(expectedValue)))
         }
 
     }
+
+
 }
