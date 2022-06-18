@@ -69,6 +69,11 @@ CREATE TABLE `mileage_log` (
 ```
 
 # API 명세
+POST /events : 리뷰 작성, 수정, 삭제 이벤트 발생시 마일리지 포인트 부여
+GET /api/mileage/{userId} : 유저의 현재 포인트 정보 반환
+GET /api/mileage/all/{userId} : 유저의 포인트 증감 이력 반환
+
+자세한 사항은 프로젝트 실행 후 Swagger 문서 확인  
 http://localhost:8080/swagger-ui/index.html
 
 # Schema
