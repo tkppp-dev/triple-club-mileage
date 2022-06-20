@@ -6,8 +6,8 @@ import com.tkppp.tripleclubmileage.mileage.domain.*
 import com.tkppp.tripleclubmileage.mileage.dto.MileageLogResponseDto
 import com.tkppp.tripleclubmileage.mileage.dto.MileageSaveRequestDto
 import com.tkppp.tripleclubmileage.mileage.util.LogStatus
+import com.tkppp.tripleclubmileage.mileage.util.ReviewAction
 import com.tkppp.tripleclubmileage.mileage.util.ReviewAction.*
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -24,7 +24,6 @@ class MileageService(
             else -> entity.point
         }
 
-
     fun getMileageLogList(userId: UUID): List<MileageLogResponseDto> {
         val logs = mileageLogRepository.findByUserId(userId)
         return logs.map { MileageLogResponseDto(it) }
@@ -37,25 +36,34 @@ class MileageService(
         return Pair(contentPoint, imagePoint)
     }
 
+    fun getTotalPoint(cp: Int, ip: Int, bp: Int) = cp + ip + bp
+
+    fun getMileageEntity(action: ReviewAction, userId: UUID): Mileage = when (action) {
+        ADD -> mileageRepository.findByUserId(userId) ?: Mileage(userId = userId)
+        else -> mileageRepository.findByUserId(userId)
+            ?: throw CustomException(ErrorCode.MILEAGE_DATA_NOT_FOUND)
+    }
+
+    fun getRecentLog(reviewId: UUID): MileageLog =
+        mileageLogRepository.findRecentLog(reviewId) ?: throw CustomException(ErrorCode.MILEAGE_LOG_NOT_FOUND)
+
     fun isFirstReview(placeId: UUID): Boolean {
         val result = mileageLogRepository.findGroupByAction(placeId)
-        return if(result.isEmpty()){
+        return if (result.isEmpty()) {
             true
-        } else if(result.size == 1) {
+        } else if (result.size == 1) {
             false
         } else {
             result[0].cnt == result[1].cnt
         }
     }
 
-    fun getTotalPoint(cp: Int, ip: Int, bp: Int) = cp + ip + bp
-
-    fun getMileageSavingDataWhenActionAdd(dto: MileageSaveRequestDto): Triple<Mileage, MileageLog, Int> {
-        val mileage = mileageRepository.findByUserId(dto.userId) ?: Mileage(userId = dto.userId)
+    fun getMileageLogEntityWhenActionAdd(dto: MileageSaveRequestDto): MileageLog {
         val (contentPoint, imagePoint) = getPoints(dto)
         val bonusPoint = if (isFirstReview(dto.placeId)) 1 else 0
         val variation = getTotalPoint(contentPoint, imagePoint, bonusPoint)
-        val log = MileageLog(
+
+        return MileageLog(
             action = dto.action,
             status = LogStatus.INCREASE,
             contentPoint = contentPoint,
@@ -66,15 +74,10 @@ class MileageService(
             placeId = dto.placeId,
             reviewId = dto.reviewId
         )
-        return Triple(mileage, log, variation)
     }
 
-    fun getMileageSavingDataWhenActionMod(dto: MileageSaveRequestDto): Triple<Mileage, MileageLog, Int> {
-        val mileage = mileageRepository.findByUserId(dto.userId)
-            ?: throw CustomException(ErrorCode.MILEAGE_DATA_NOT_FOUND)
-        val recentLog = mileageLogRepository.findRecentLog(dto.reviewId)
-            ?: throw CustomException(ErrorCode.MILEAGE_LOG_NOT_FOUND)
-
+    fun getMileageLogEntityWhenActionMod(dto: MileageSaveRequestDto): MileageLog {
+        val recentLog = getRecentLog(dto.reviewId)
         val (contentPoint, imagePoint) = getPoints(dto)
         val variation = getTotalPoint(contentPoint, imagePoint, recentLog.bonusPoint) - recentLog.getTotalPoint()
         val status = if (variation > 0) {
@@ -85,7 +88,7 @@ class MileageService(
             LogStatus.DECREASE
         }
 
-        val log = MileageLog(
+        return MileageLog(
             action = dto.action,
             status = status,
             contentPoint = contentPoint,
@@ -96,18 +99,13 @@ class MileageService(
             placeId = dto.placeId,
             reviewId = dto.reviewId
         )
-
-        return Triple(mileage, log, variation)
     }
 
-    fun getMileageSavingDataWhenActionDelete(dto: MileageSaveRequestDto): Triple<Mileage, MileageLog, Int> {
-        val mileage = mileageRepository.findByUserId(dto.userId)
-            ?: throw CustomException(ErrorCode.MILEAGE_DATA_NOT_FOUND)
-        val recentLog = mileageLogRepository.findRecentLog(dto.reviewId)
-            ?: throw CustomException(ErrorCode.MILEAGE_LOG_NOT_FOUND)
-
+    fun getMileageLogEntityWhenActionDelete(dto: MileageSaveRequestDto): MileageLog {
+        val recentLog = getRecentLog(dto.reviewId)
         val variation = -recentLog.getTotalPoint()
-        val log = MileageLog(
+
+        return MileageLog(
             action = dto.action,
             status = LogStatus.DECREASE,
             variation = variation,
@@ -115,21 +113,19 @@ class MileageService(
             placeId = dto.placeId,
             reviewId = dto.reviewId
         )
-
-        return Triple(mileage, log, variation)
     }
 
     @Transactional
     fun saveMileagePoint(dto: MileageSaveRequestDto) {
-        val (mileageEntity, logEntity, variation) = when (dto.action) {
-            ADD -> getMileageSavingDataWhenActionAdd(dto)
-            MOD -> getMileageSavingDataWhenActionMod(dto)
-            DELETE -> getMileageSavingDataWhenActionDelete(dto)
+        val mileageEntity = getMileageEntity(dto.action, dto.userId)
+        val logEntity = when (dto.action) {
+            ADD -> getMileageLogEntityWhenActionAdd(dto)
+            MOD -> getMileageLogEntityWhenActionMod(dto)
+            DELETE -> getMileageLogEntityWhenActionDelete(dto)
         }
-        // log save
-        mileageLogRepository.save(logEntity)
-        // mileage save
-        mileageEntity.point += variation
+
+        mileageEntity.point += logEntity.variation
         mileageRepository.save(mileageEntity)
+        mileageLogRepository.save(logEntity)
     }
 }
