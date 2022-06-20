@@ -10,6 +10,7 @@ import com.tkppp.tripleclubmileage.mileage.util.ReviewAction
 import io.mockk.*
 import io.mockk.MockKAnnotations.init
 import io.mockk.junit5.MockKExtension
+import org.assertj.core.api.Assertions.`as`
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 
@@ -245,6 +246,135 @@ class MileageServiceTest {
 
             // then
             assertThat(result).isEqualTo(p1 + p2 + p3)
+        }
+    }
+
+    @Nested
+    @DisplayName("getMileageEntity() 테스트")
+    inner class GetMileageEntityTest {
+
+        // global given
+        private val userId = UUID.randomUUID()
+
+        @Test
+        @DisplayName("action = ADD 일 경우 존재하지 않는 userId 를 받을 경우 id가 null 인 엔티티를 반환한다")
+        fun getMileageEntity_shouldReturnNullIdEntity() {
+            // stub
+            every { mileageRepository.findByUserId(userId) } returns null
+
+            // when
+            val result = mileageService.getMileageEntity(ReviewAction.ADD, userId)
+
+            // then
+            assertThat(result.id).isNull()
+            assertThat(result.userId).isEqualTo(userId)
+        }
+
+        @Test
+        @DisplayName("action = ADD 일 때 존재하는 userId 를 받을 경우 id가 null 이 아닌엔티티를 반환한다")
+        fun getMileageEntity_shouldReturnNotNullIdEntity() {
+            // given
+            val point = 10
+            // stub
+            every { mileageRepository.findByUserId(userId) } returns Mileage(id = UUID.randomUUID(), userId, point = point)
+
+            // when
+            val result = mileageService.getMileageEntity(ReviewAction.ADD, userId)
+
+            // then
+            assertThat(result.id).isNotNull
+            assertThat(result.userId).isEqualTo(userId)
+            assertThat(result.point).isEqualTo(point)
+        }
+
+        @Test
+        @DisplayName("action != ADD 일 때 존재하지 않는 userId 를 받을 경우 CustomException(MILEAGE_DATA_NOT_FOUND)를 던진다")
+        fun getMileageEntity_shouldThrowCustomException(){
+            // stub
+            every { mileageRepository.findByUserId(userId) } returns null
+
+            // when
+            val ex1 = assertThrows<CustomException> { mileageService.getMileageEntity(ReviewAction.MOD, userId) }
+            val ex2 = assertThrows<CustomException> { mileageService.getMileageEntity(ReviewAction.DELETE, userId) }
+
+            // then
+            assertThat(ex1.errorCode).isEqualTo(ErrorCode.MILEAGE_DATA_NOT_FOUND)
+            assertThat(ex2.errorCode).isEqualTo(ErrorCode.MILEAGE_DATA_NOT_FOUND)
+        }
+
+        @Test
+        @DisplayName("action != ADD 일 때 존재하는 userId 를 받을 경우 id가 null 이 아닌엔티티를 반환한다")
+        fun getMileageEntity_shouldReturnNotNullIdEntityWhenNotAdd() {
+            // given
+            val point = 10
+            // stub
+            every { mileageRepository.findByUserId(userId) } returns Mileage(id = UUID.randomUUID(), userId, point = point)
+
+            // when
+            val resultMod = mileageService.getMileageEntity(ReviewAction.MOD, userId)
+            val resultDel = mileageService.getMileageEntity(ReviewAction.DELETE, userId)
+
+            // then
+            assertThat(resultMod.id).isNotNull
+            assertThat(resultMod.userId).isEqualTo(userId)
+            assertThat(resultMod.point).isEqualTo(point)
+
+            assertThat(resultDel.id).isNotNull
+            assertThat(resultDel.userId).isEqualTo(userId)
+            assertThat(resultDel.point).isEqualTo(point)
+        }
+    }
+
+    @Nested
+    @DisplayName("getRecentLog() 테스트")
+    inner class GetRecentLogTest {
+
+        @Test
+        @DisplayName("존재하지 않는 reviewId를 받는 경우 CustomException(MILEAGE_LOG_NOT_FOUND)를 던진다")
+        fun getRecentLog_shouldThrowCustomException() {
+            // stub
+            every { mileageLogRepository.findRecentLog(any()) } returns null
+
+            // when
+            val ex = assertThrows<CustomException> { mileageService.getRecentLog(UUID.randomUUID()) }
+
+            // then
+            assertThat(ex.errorCode).isEqualTo(ErrorCode.MILEAGE_LOG_NOT_FOUND)
+        }
+
+        @Test
+        @DisplayName("존재하 reviewId를 받는 경우 가장 최신 로그를 반환한다")
+        fun getRecentLog_shouldSuccess() {
+            // given
+            val reviewId = UUID.randomUUID()
+            val log = MileageLog(
+                id = UUID.randomUUID(),
+                action = ReviewAction.ADD,
+                status = LogStatus.INCREASE,
+                variation = 0,
+                userId = UUID.randomUUID(),
+                placeId = UUID.randomUUID(),
+                reviewId = reviewId
+            )
+
+            // stub
+            every { mileageLogRepository.findRecentLog(reviewId) } returns log
+
+            // when
+            val result = mileageService.getRecentLog(reviewId)
+
+            // then
+            assertThat(result.id).isEqualTo(log.id)
+            assertThat(result.action).isEqualTo(log.action)
+            assertThat(result.status).isEqualTo(log.status)
+            assertThat(result.createdAt).isEqualTo(log.createdAt)
+            assertThat(result.contentPoint).isEqualTo(0)
+            assertThat(result.imagePoint).isEqualTo(0)
+            assertThat(result.bonusPoint).isEqualTo(0)
+            assertThat(result.variation).isEqualTo(log.variation)
+            assertThat(result.userId).isEqualTo(log.userId)
+            assertThat(result.placeId).isEqualTo(log.placeId)
+            assertThat(result.reviewId).isEqualTo(reviewId)
         }
     }
 
