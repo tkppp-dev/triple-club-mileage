@@ -87,7 +87,6 @@ http://localhost:8080/swagger-ui/index.html
    - 제약조건: not null, default 0
  - user_id: UUID
    - 제약조건: unique, not null
-   - 외래키(from user.id)이어야하나 프로젝트 특성상 일반 컬럼으로 구현
    - index
 
 ## mileage_log
@@ -95,19 +94,18 @@ http://localhost:8080/swagger-ui/index.html
  - id: UUID
  - user_id: UUID
    - 제약조건: not null
-   - 외래키(from user.id)이어야하나 프로젝트 특성상 일반 컬럼으로 구현
    - index
  - place_id: UUID
    - 제약조건: not null
-   - 외래키(from place.id)이어야하나 프로젝트 특성상 일반 컬럼으로 구현
    - index
  - review_id: UUID
    - 제약조건: not null
-   - 한 장소에 여러개의 리뷰를 남길 수 있기 때문에 이를 유저마다 구분해야하기에 필요
    - index
  - action: varchar(Enum)
+   - 제약조건: not null
    - 리뷰가 생성, 수정, 삭제되었는지를 나타냄
  - status: varchar(Enum)
+   - 제약조건: not null
    - 전과 비교해 마일리지의 증감 상태를 나타냄
  - content_point: tiny_int
    - 제약조건: not null, default 0
