@@ -17,6 +17,7 @@
 ``` bash
 $ git clone https://github.com/tkppp-dev/triple-club-mileage.git
 $ cd triple-club-mileage
+$ chmod +x gradlew
 $ ./gradlew build
 $ java -jar './build/libs/triple-club-mileage-0.0.1.jar'
 ```
