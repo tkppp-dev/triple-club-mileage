@@ -8,13 +8,11 @@ import com.tkppp.tripleclubmileage.mileage.dto.MileageSaveRequestDto
 import com.tkppp.tripleclubmileage.mileage.util.LogStatus
 import com.tkppp.tripleclubmileage.mileage.util.ReviewAction
 import io.mockk.*
+import io.mockk.MockKAnnotations.init
 import io.mockk.junit5.MockKExtension
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
 
-import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.util.*
 
@@ -24,7 +22,7 @@ class MileageServiceTest {
     private val mileageRepository = mockk<MileageRepository>()
     private val mileageLogRepository = mockk<MileageLogRepository>()
     private val mileageService = MileageService(mileageRepository, mileageLogRepository)
-    private val spy = spyk(mileageService)
+    private val spyService = spyk(mileageService)
 
     @Nested
     @DisplayName("getMileagePoint() 테스트")
@@ -169,7 +167,7 @@ class MileageServiceTest {
 
         @Test
         @DisplayName("내용 > 0, 이미지 개수 = 0 인 경우 Pair(1,0)을 반환한다")
-        fun isFirstReview_shouldReturnTriple100() {
+        fun isFirstReview_shouldReturnPair10() {
             // given
             val dto = MileageSaveRequestDto(
                 type = "REVIEW",
@@ -190,7 +188,7 @@ class MileageServiceTest {
 
         @Test
         @DisplayName("내용 = 0, 이미지 개수 > 0 인 경우 Pair(0,1)을 반환한다")
-        fun isFirstReview_shouldReturnTriple010() {
+        fun isFirstReview_shouldReturnPair01() {
             // given
             val dto = MileageSaveRequestDto(
                 type = "REVIEW",
@@ -208,6 +206,26 @@ class MileageServiceTest {
             // then
             assertThat(result).isEqualTo(Pair(0, 1))
         }
+        @Test
+        @DisplayName("내용 > 0, 이미지 개수 > 0 인 경우 Pair(1,1)을 반환한다")
+        fun isFirstReview_shouldReturnPair11() {
+            // given
+            val dto = MileageSaveRequestDto(
+                type = "REVIEW",
+                action = ReviewAction.ADD,
+                reviewId = UUID.randomUUID(),
+                content = "Not Empty",
+                attachedPhotoIds = listOf(UUID.randomUUID()),
+                userId = UUID.randomUUID(),
+                placeId = UUID.randomUUID()
+            )
+
+            // when
+            val result = mileageService.getPoints(dto)
+
+            // then
+            assertThat(result).isEqualTo(Pair(1, 1))
+        }
     }
 
     @Nested
@@ -219,8 +237,8 @@ class MileageServiceTest {
         fun getTotalPoint_shouldReturnElementSum() {
             // given
             val p1 = 1
-            val p2 = 2
-            val p3 = 3
+            val p2 = 10
+            val p3 = 100
 
             // when
             val result = mileageService.getTotalPoint(p1, p2, p3)
@@ -231,8 +249,8 @@ class MileageServiceTest {
     }
 
     @Nested
-    @DisplayName("getMileageSavingDataWhenActionAdd() 테스트")
-    inner class GetMileageSavingDataWhenActionAddTest {
+    @DisplayName("getMileageLogEntityWhenActionAdd() 테스트")
+    inner class GetMileageLogEntityWhenActionAddTest {
         // global given
         // point 총합이 1인 dto
         private val dto = MileageSaveRequestDto(
@@ -245,67 +263,48 @@ class MileageServiceTest {
             placeId = UUID.randomUUID()
         )
 
-        // global stub
-        init {
-            // 항상 보너스 포인트를 받는 못하게 설정
-            every { mileageLogRepository.findGroupByAction(any()) } returns listOf(
-                AddDeleteCountingDto(action = ReviewAction.ADD, cnt = 2),
-                AddDeleteCountingDto(action = ReviewAction.DELETE, cnt = 0)
-            )
+        @BeforeEach
+        fun setup(){
+            init(spyService)
         }
 
         @Test
-        @DisplayName("마일리지 테이블에 존재하지 않는 userId를 받는 경우 id가 null 인 마일리지 엔티티를 반환한다")
-        fun getMileageSavingDataWhenActionAdd_shouldReturnNullIdMileageEntity() {
+        @DisplayName("최초로 작성하지 않는 리뷰인 경우 보너스 포인트를 지급하지 말아야한다")
+        fun getMileageLogEntityWhenActionAdd_shouldReturnBp0Entity() {
             // stub
-            every { mileageRepository.findByUserId(any()) } returns null
+            every { spyService.isFirstReview(any()) } returns false
 
             // when
-            val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionAdd(dto)
+            val logEntity = spyService.getMileageLogEntityWhenActionAdd(dto)
 
             // then
-            assertThat(mileageEntity.id).isNull()
-            assertThat(mileageEntity.userId).isEqualTo(dto.userId)
-            assertThat(mileageEntity.point).isEqualTo(0)
-
             assertThat(logEntity.action).isEqualTo(ReviewAction.ADD)
             assertThat(logEntity.status).isEqualTo(LogStatus.INCREASE)
             assertThat(logEntity.contentPoint).isEqualTo(1)
             assertThat(logEntity.imagePoint).isEqualTo(0)
             assertThat(logEntity.bonusPoint).isEqualTo(0)
-            assertThat(logEntity.variation).isEqualTo(variation)
+            assertThat(logEntity.variation).isEqualTo(1)
             assertThat(logEntity.userId).isEqualTo(dto.userId)
             assertThat(logEntity.placeId).isEqualTo(dto.placeId)
-
-            assertThat(variation).isEqualTo(1)
         }
-
         @Test
-        @DisplayName("마일리지 테이블에 존재하는 userId를 받는 경우 id가 null 이 아닌 마일리지 엔티티를 반환한다")
-        fun getMileageSavingDataWhenActionAdd_shouldReturnNotNullIdMileageEntity() {
-            // given
-            val point = 10
+        @DisplayName("최초로 작성한 리뷰인 경우 보너스 포인트를 지급해야한다")
+        fun getMileageLogEntityWhenActionAdd_shouldReturnBp1Entity() {
             // stub
-            every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = dto.userId, point = point)
+            every { spyService.isFirstReview(any()) } returns true
 
             // when
-            val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionAdd(dto)
+            val logEntity = spyService.getMileageLogEntityWhenActionAdd(dto)
 
             // then
-            assertThat(mileageEntity.id).isNotNull
-            assertThat(mileageEntity.userId).isEqualTo(dto.userId)
-            assertThat(mileageEntity.point).isEqualTo(point)
-
             assertThat(logEntity.action).isEqualTo(ReviewAction.ADD)
             assertThat(logEntity.status).isEqualTo(LogStatus.INCREASE)
             assertThat(logEntity.contentPoint).isEqualTo(1)
             assertThat(logEntity.imagePoint).isEqualTo(0)
-            assertThat(logEntity.bonusPoint).isEqualTo(0)
-            assertThat(logEntity.variation).isEqualTo(variation)
+            assertThat(logEntity.bonusPoint).isEqualTo(1)
+            assertThat(logEntity.variation).isEqualTo(2)
             assertThat(logEntity.userId).isEqualTo(dto.userId)
             assertThat(logEntity.placeId).isEqualTo(dto.placeId)
-
-            assertThat(variation).isEqualTo(1)
         }
     }
 
@@ -323,6 +322,7 @@ class MileageServiceTest {
             userId = UUID.randomUUID(),
             placeId = UUID.randomUUID(),
         )
+
         // point 총합이 2인 로그
         private val recentLog = MileageLog(
             action = dto.action,
@@ -336,71 +336,35 @@ class MileageServiceTest {
             reviewId = dto.reviewId
         )
 
-        @Test
-        @DisplayName("마일리지 테이블에 존재하지 않는 userId를 받는 경우 CustomException(MILEAGE_DATA_NOT_FOUND)을 던진다")
-        fun getMileageSavingDataWhenActionMod_shouldThrowCustomExceptionWhenMileageEntityIsNull() {
-            // stub
-            every { mileageRepository.findByUserId(any()) } returns null
-            // when
-            val ex = assertThrows<CustomException>{
-                mileageService.getMileageSavingDataWhenActionMod(dto)
-            }
-
-            // then
-            assertThat(ex.errorCode).isEqualTo(ErrorCode.MILEAGE_DATA_NOT_FOUND)
-        }
-
-        @Test
-        @DisplayName("마일리지 로그 테이블에 존재하지 않는 reviewId를 받는 경우 CustomException(MILEAGE_LOG_NOT_FOUND)을 던진다")
-        fun getMileageSavingDataWhenActionMod_shouldThrowCustomExceptionWhenMileageLogEntityIsNull() {
-            // stub
-            every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = dto.userId)
-            every { mileageLogRepository.findRecentLog(any()) } returns null
-
-            // when
-            val ex = assertThrows<CustomException>{
-                mileageService.getMileageSavingDataWhenActionMod(dto)
-            }
-
-            // then
-            assertThat(ex.errorCode).isEqualTo(ErrorCode.MILEAGE_LOG_NOT_FOUND)
+        @BeforeEach
+        fun setup(){
+            init(spyService)
         }
 
         @Test
         @DisplayName("마일리지 포인트 총합이 이전보다 작은 DTO 를 받을 경우 status 가 DECREASE 인 MileageLog 엔티티를 반환한다")
-        fun getMileageSavingDataWhenActionMod_shouldReturnDecreaseStatusMileageLogEntity() {
-            // given
-            val point = 10
-
+        fun getMileageLogEntityWhenActionMod_shouldReturnDecreaseStatusMileageLogEntity() {
             // stub
-            every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = dto.userId, point = point)
-            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
+            every { spyService.getRecentLog(any()) } returns recentLog
 
             // when
-            val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionMod(dto)
+            val logEntity = spyService.getMileageLogEntityWhenActionMod(dto)
 
             // then
-            assertThat(mileageEntity.id).isNotNull
-            assertThat(mileageEntity.userId).isEqualTo(dto.userId)
-            assertThat(mileageEntity.point).isEqualTo(point)
-
             assertThat(logEntity.action).isEqualTo(ReviewAction.MOD)
             assertThat(logEntity.status).isEqualTo(LogStatus.DECREASE)
             assertThat(logEntity.contentPoint).isEqualTo(0)
             assertThat(logEntity.imagePoint).isEqualTo(0)
             assertThat(logEntity.bonusPoint).isEqualTo(1)
-            assertThat(logEntity.variation).isEqualTo(variation)
+            assertThat(logEntity.variation).isEqualTo(-1)
             assertThat(logEntity.userId).isEqualTo(dto.userId)
             assertThat(logEntity.placeId).isEqualTo(dto.placeId)
-
-            assertThat(variation).isEqualTo(-1)
         }
 
         @Test
         @DisplayName("마일리지 포인트 총합이 이전과 같은 DTO 를 받을 경우 status 가 SAME 인 MileageLog 엔티티를 반환한다")
-        fun getMileageSavingDataWhenActionMod_shouldReturnSameStatusMileageLogEntity() {
+        fun getMileageLogEntityWhenActionMod_shouldReturnSameStatusMileageLogEntity() {
             // given
-            val point = 10
             val sdto = MileageSaveRequestDto(
                 type = "REVIEW",
                 action = ReviewAction.MOD,
@@ -411,34 +375,26 @@ class MileageServiceTest {
                 placeId = UUID.randomUUID()
             )
             // stub
-            every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = sdto.userId, point = point)
-            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
+            every { spyService.getRecentLog(any()) } returns recentLog
 
             // when
-            val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionMod(sdto)
+            val logEntity = spyService.getMileageLogEntityWhenActionMod(sdto)
 
             // then
-            assertThat(mileageEntity.id).isNotNull
-            assertThat(mileageEntity.userId).isEqualTo(sdto.userId)
-            assertThat(mileageEntity.point).isEqualTo(point)
-
             assertThat(logEntity.action).isEqualTo(ReviewAction.MOD)
             assertThat(logEntity.status).isEqualTo(LogStatus.SAME)
             assertThat(logEntity.contentPoint).isEqualTo(1)
             assertThat(logEntity.imagePoint).isEqualTo(0)
             assertThat(logEntity.bonusPoint).isEqualTo(1)
-            assertThat(logEntity.variation).isEqualTo(variation)
+            assertThat(logEntity.variation).isEqualTo(0)
             assertThat(logEntity.userId).isEqualTo(sdto.userId)
             assertThat(logEntity.placeId).isEqualTo(sdto.placeId)
-
-            assertThat(variation).isEqualTo(0)
         }
 
         @Test
         @DisplayName("마일리지 포인트 총합이 이전보다 높은 DTO 를 받을 경우 status 가 INCREASE 인 MileageLog 엔티티를 반환한다")
-        fun getMileageSavingDataWhenActionMod_shouldReturnIncreaseStatusMileageLogEntity() {
+        fun getMileageLogEntityWhenActionMod_shouldReturnIncreaseStatusMileageLogEntity() {
             // given
-            val point = 10
             val idto = MileageSaveRequestDto(
                 type = "REVIEW",
                 action = ReviewAction.MOD,
@@ -449,33 +405,26 @@ class MileageServiceTest {
                 placeId = UUID.randomUUID()
             )
             // stub
-            every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = idto.userId, point = point)
-            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
+            every { spyService.getRecentLog(any()) } returns recentLog
 
             // when
-            val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionMod(idto)
+            val logEntity = spyService.getMileageLogEntityWhenActionMod(idto)
 
             // then
-            assertThat(mileageEntity.id).isNotNull
-            assertThat(mileageEntity.userId).isEqualTo(idto.userId)
-            assertThat(mileageEntity.point).isEqualTo(point)
-
             assertThat(logEntity.action).isEqualTo(ReviewAction.MOD)
             assertThat(logEntity.status).isEqualTo(LogStatus.INCREASE)
             assertThat(logEntity.contentPoint).isEqualTo(1)
             assertThat(logEntity.imagePoint).isEqualTo(1)
             assertThat(logEntity.bonusPoint).isEqualTo(1)
-            assertThat(logEntity.variation).isEqualTo(variation)
+            assertThat(logEntity.variation).isEqualTo(1)
             assertThat(logEntity.userId).isEqualTo(idto.userId)
             assertThat(logEntity.placeId).isEqualTo(idto.placeId)
-
-            assertThat(variation).isEqualTo(1)
         }
     }
 
     @Nested
-    @DisplayName("getMileageSavingDataWhenActionDelete() 테스트")
-    inner class GetMileageSavingDataWhenActionDeleteTest {
+    @DisplayName("getMileageLogEntityWhenActionDelete() 테스트")
+    inner class GetMileageLogEntityWhenActionDeleteTest {
         // global given
         private val dto = MileageSaveRequestDto(
             type = "REVIEW",
@@ -487,39 +436,14 @@ class MileageServiceTest {
             placeId = UUID.randomUUID()
         )
 
-        @Test
-        @DisplayName("마일리지 테이블에 존재하지 않는 userId를 받는 경우 CustomException(MILEAGE_DATA_NOT_FOUND)을 던진다")
-        fun getMileageSavingDataWhenActionDelete_shouldThrowCustomExceptionWhenMileageEntityIsNull() {
-            // stub
-            every { mileageRepository.findByUserId(any()) } returns null
-            // when
-            val ex = assertThrows<CustomException>{
-                mileageService.getMileageSavingDataWhenActionDelete(dto)
-            }
-
-            // then
-            assertThat(ex.errorCode).isEqualTo(ErrorCode.MILEAGE_DATA_NOT_FOUND)
-        }
-
-        @Test
-        @DisplayName("마일리지 로그 테이블에 존재하지 않는 reviewId를 받는 경우 CustomException(MILEAGE_LOG_NOT_FOUND)을 던진다")
-        fun getMileageSavingDataWhenActionDelete_shouldThrowCustomExceptionWhenMileageLogEntityIsNull() {
-            // stub
-            every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = dto.userId)
-            every { mileageLogRepository.findRecentLog(any()) } returns null
-
-            // when
-            val ex = assertThrows<CustomException>{
-                mileageService.getMileageSavingDataWhenActionDelete(dto)
-            }
-
-            // then
-            assertThat(ex.errorCode).isEqualTo(ErrorCode.MILEAGE_LOG_NOT_FOUND)
+        @BeforeEach
+        fun setup(){
+            init(spyService)
         }
 
         @Test
         @DisplayName("정상 수행 테스트")
-        fun getMileageSavingDataWhenActionDelete_shouldSuccess() {
+        fun getMileageLogEntityWhenActionDelete_shouldSuccess() {
             // given
             val recentLog = MileageLog(
                 action = dto.action,
@@ -533,17 +457,12 @@ class MileageServiceTest {
                 reviewId = dto.reviewId
             )
             // stub
-            every { mileageRepository.findByUserId(any()) } returns Mileage(id = UUID.randomUUID(), userId = dto.userId, point = 10)
-            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
+            every { spyService.getRecentLog(any()) } returns recentLog
 
             // when
-            val (mileageEntity, logEntity, variation) = mileageService.getMileageSavingDataWhenActionDelete(dto)
+            val logEntity = spyService.getMileageLogEntityWhenActionDelete(dto)
 
             // then
-            assertThat(mileageEntity.id).isNotNull
-            assertThat(mileageEntity.userId).isEqualTo(dto.userId)
-            assertThat(mileageEntity.point).isEqualTo(10)
-
             assertThat(logEntity.action).isEqualTo(ReviewAction.DELETE)
             assertThat(logEntity.status).isEqualTo(LogStatus.DECREASE)
             assertThat(logEntity.contentPoint).isEqualTo(0)
@@ -552,8 +471,6 @@ class MileageServiceTest {
             assertThat(logEntity.variation).isEqualTo(-2)
             assertThat(logEntity.userId).isEqualTo(dto.userId)
             assertThat(logEntity.placeId).isEqualTo(dto.placeId)
-
-            assertThat(variation).isEqualTo(-2)
         }
     }
 
@@ -561,9 +478,21 @@ class MileageServiceTest {
     @DisplayName("saveMileagePoint() 테스트")
     inner class SaveMileagePointTest {
 
+        private val initialPoint = 10
+        private val userId = UUID.randomUUID()
+        private lateinit var mileage: Mileage
+        private lateinit var slot: CapturingSlot<Mileage>
+
+        @BeforeEach
+        fun setup(){
+            init(spyService)
+            mileage = Mileage(id = UUID.randomUUID(), userId = userId, point = initialPoint)
+            slot = slot()
+        }
+
         @Test
         @DisplayName("action.ADD - 정상 수행 테스트")
-        fun saveMileagePoint_shouldSuccessWhenActionAdd(){
+        fun saveMileagePoint_shouldSuccessWhenActionAdd() {
             // given
             val dto = MileageSaveRequestDto(
                 type = "REVIEW",
@@ -571,7 +500,7 @@ class MileageServiceTest {
                 reviewId = UUID.randomUUID(),
                 content = "Not empty",
                 attachedPhotoIds = listOf(),
-                userId = UUID.randomUUID(),
+                userId = userId,
                 placeId = UUID.randomUUID()
             )
             val newLog = MileageLog(
@@ -585,33 +514,29 @@ class MileageServiceTest {
                 placeId = dto.placeId,
                 reviewId = dto.reviewId
             )
-            val mileage =  Mileage(id = UUID.randomUUID(), userId = dto.userId, point = 10)
+
             // stub
-            every { mileageRepository.findByUserId(any()) } returns mileage
-            every { mileageLogRepository.findGroupByAction(any()) } returns listOf(
-                AddDeleteCountingDto(action = ReviewAction.ADD, cnt = 2),
-                AddDeleteCountingDto(action = ReviewAction.DELETE, cnt = 2)
-            )
+            every { spyService.getMileageEntity(any(), any()) } returns mileage
+            every { spyService.getMileageLogEntityWhenActionAdd(any()) } returns newLog
             every { mileageLogRepository.save(any()) } returns newLog
-            every {
-                mileage.point += 2
-                mileageRepository.save(any())
-            } returns mileage
+            every { mileageRepository.save(capture(slot)) } returns mileage
 
             // when
-            spy.saveMileagePoint(dto)
+            spyService.saveMileagePoint(dto)
 
             // then
             verify(exactly = 1) {
-                spy.getMileageSavingDataWhenActionAdd(dto)
+                spyService.getMileageEntity(dto.action, dto.userId)
+                spyService.getMileageLogEntityWhenActionAdd(dto)
                 mileageRepository.save(any())
                 mileageLogRepository.save(any())
             }
+            assertThat(slot.captured.point).isEqualTo(initialPoint + newLog.variation)
         }
 
         @Test
         @DisplayName("action.MOD - 정상 수행 테스트")
-        fun saveMileagePoint_shouldSuccessWhenActionMod(){
+        fun saveMileagePoint_shouldSuccessWhenActionMod() {
             // given
             // 총합이 0인 로그
             val dto = MileageSaveRequestDto(
@@ -620,20 +545,8 @@ class MileageServiceTest {
                 reviewId = UUID.randomUUID(),
                 content = "",
                 attachedPhotoIds = listOf(),
-                userId = UUID.randomUUID(),
+                userId = userId,
                 placeId = UUID.randomUUID()
-            )
-            // point 총합이 2인 로그
-            val recentLog = MileageLog(
-                action = dto.action,
-                status = LogStatus.INCREASE,
-                contentPoint = 1,
-                imagePoint = 0,
-                bonusPoint = 1,
-                variation = 2,
-                userId = dto.userId,
-                placeId = dto.placeId,
-                reviewId = dto.reviewId
             )
             val newLog = MileageLog(
                 action = dto.action,
@@ -642,35 +555,33 @@ class MileageServiceTest {
                 imagePoint = 0,
                 bonusPoint = 1,
                 variation = -1,
-                userId = dto.userId,
+                userId = userId,
                 placeId = dto.placeId,
                 reviewId = dto.reviewId
             )
-            val mileage =  Mileage(id = UUID.randomUUID(), userId = dto.userId, point = 10)
 
             // stub
-            every { mileageRepository.findByUserId(any()) } returns mileage
-            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
+            every { spyService.getMileageEntity(any(), any()) } returns mileage
+            every { spyService.getMileageLogEntityWhenActionMod(any()) } returns newLog
             every { mileageLogRepository.save(any()) } returns newLog
-            every {
-                mileage.point -= 1
-                mileageRepository.save(any())
-            } returns mileage
+            every { mileageRepository.save(capture(slot)) } returns mileage
 
             // when
-            spy.saveMileagePoint(dto)
+            spyService.saveMileagePoint(dto)
 
             // then
             verify(exactly = 1) {
-                spy.getMileageSavingDataWhenActionMod(dto)
+                spyService.getMileageEntity(dto.action, dto.userId)
+                spyService.getMileageLogEntityWhenActionMod(dto)
                 mileageRepository.save(any())
                 mileageLogRepository.save(any())
             }
+            assertThat(slot.captured.point).isEqualTo(initialPoint + newLog.variation)
         }
 
         @Test
         @DisplayName("action.DELETE - 정상 수행 테스트")
-        fun saveMileagePoint_shouldSuccessWhenActionDelete(){
+        fun saveMileagePoint_shouldSuccessWhenActionDelete() {
             // given
             // 총합이 0인 로그
             val dto = MileageSaveRequestDto(
@@ -679,20 +590,8 @@ class MileageServiceTest {
                 reviewId = UUID.randomUUID(),
                 content = "",
                 attachedPhotoIds = listOf(),
-                userId = UUID.randomUUID(),
+                userId = userId,
                 placeId = UUID.randomUUID()
-            )
-            // point 총합이 2인 로그
-            val recentLog = MileageLog(
-                action = dto.action,
-                status = LogStatus.INCREASE,
-                contentPoint = 1,
-                imagePoint = 0,
-                bonusPoint = 1,
-                variation = 2,
-                userId = dto.userId,
-                placeId = dto.placeId,
-                reviewId = dto.reviewId
             )
             val newLog = MileageLog(
                 action = dto.action,
@@ -705,26 +604,25 @@ class MileageServiceTest {
                 placeId = dto.placeId,
                 reviewId = dto.reviewId
             )
-            val mileage =  Mileage(id = UUID.randomUUID(), userId = dto.userId, point = 10)
+            val mileage = Mileage(id = UUID.randomUUID(), userId = dto.userId, point = 10)
 
             // stub
-            every { mileageRepository.findByUserId(any()) } returns mileage
-            every { mileageLogRepository.findRecentLog(any()) } returns recentLog
+            every { spyService.getMileageEntity(any(), any()) } returns mileage
+            every { spyService.getMileageLogEntityWhenActionDelete(any()) } returns newLog
             every { mileageLogRepository.save(any()) } returns newLog
-            every {
-                mileage.point -= 2
-                mileageRepository.save(any())
-            } returns mileage
+            every { mileageRepository.save(capture(slot)) } returns mileage
 
             // when
-            spy.saveMileagePoint(dto)
+            spyService.saveMileagePoint(dto)
 
             // then
             verify(exactly = 1) {
-                spy.getMileageSavingDataWhenActionDelete(dto)
+                spyService.getMileageEntity(dto.action, dto.userId)
+                spyService.getMileageLogEntityWhenActionDelete(dto)
                 mileageRepository.save(any())
                 mileageLogRepository.save(any())
             }
+            assertThat(slot.captured.point).isEqualTo(initialPoint + newLog.variation)
         }
 
     }
