@@ -9,6 +9,7 @@
 # 개발환경
  - MacOS BigSur
  - Intellij Ultimate
+ - openJDK 11
  - Spring Boot 2.7
  - MySQL 8.0.28(Local)
 
